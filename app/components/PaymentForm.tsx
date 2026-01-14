@@ -12,7 +12,8 @@ type PaymentMethod = 'card' | 'apple_pay'
 
 export default function PaymentForm() {
   const [stripe, setStripe] = useState<any>(null)
-  const [elements, setElements] = useState<any>(null)
+  const [, setElements] = useState<any>(null);
+  
   const [cardElement, setCardElement] = useState<any>(null)
 
   const [method, setMethod] = useState<PaymentMethod>('card')
