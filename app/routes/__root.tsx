@@ -14,6 +14,7 @@ export const Route = createRootRoute({
       {
         src: 'https://js.stripe.com/v3/',
       },
+    
     ],
   }),
 
