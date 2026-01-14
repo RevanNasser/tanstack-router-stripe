@@ -12,8 +12,7 @@ type PaymentMethod = 'card' | 'apple_pay'
 
 export default function PaymentForm() {
   const [stripe, setStripe] = useState<any>(null)
-  const [, setElements] = useState<any>(null);
-  
+  const [, setElements] = useState<any>(null)
   const [cardElement, setCardElement] = useState<any>(null)
 
   const [method, setMethod] = useState<PaymentMethod>('card')
@@ -28,6 +27,7 @@ export default function PaymentForm() {
   const cardElementRef = useRef<HTMLDivElement>(null)
   const applePayRef = useRef<HTMLDivElement>(null)
 
+  // Initialize Stripe Card Element
   useEffect(() => {
     let mounted = true
     let card: any = null
@@ -51,9 +51,7 @@ export default function PaymentForm() {
                 color: isDark ? '#64748b' : '#94a3b8',
               },
             },
-            invalid: {
-              color: '#dc2626',
-            },
+            invalid: { color: '#dc2626' },
           },
         })
 
@@ -62,7 +60,6 @@ export default function PaymentForm() {
           if (cardElementRef.current) {
             card.mount(cardElementRef.current)
             setCardElement(card)
-
             card.on('change', (event: any) => {
               setError(event.error?.message ?? null)
             })
@@ -78,31 +75,28 @@ export default function PaymentForm() {
     }
 
     initStripe()
-
     return () => {
       mounted = false
-      try {
-        card?.unmount()
-      } catch {}
+      try { card?.unmount() } catch {}
     }
   }, [])
 
- 
+  // Setup Apple Pay PaymentRequest
   useEffect(() => {
     if (!stripe) return
 
     const pr = stripe.paymentRequest({
       country: 'AE',
-      currency: 'sar',
-      total: {
-        label: 'Demo Payment',
-        amount: Math.round(Number(amount) * 100),
-      },
+      currency: 'aed', // lowercase!
+      total: { label: 'Demo Payment', amount: Math.round(Number(amount) * 100) },
       requestPayerName: true,
       requestPayerEmail: true,
+      supportedNetworks: ['visa', 'masterCard', 'amex'],
+      merchantCapabilities: ['supports3DS'],
     })
 
     pr.canMakePayment().then((result: any) => {
+      console.log('Apple Pay availability:', result)
       if (result?.applePay) {
         setPaymentRequest(pr)
         setApplePayAvailable(true)
@@ -112,72 +106,47 @@ export default function PaymentForm() {
     })
   }, [stripe, amount])
 
+  // Mount Apple Pay button
   useEffect(() => {
     if (!paymentRequest || !applePayRef.current || !stripe) return
 
     const prButton = stripe.elements().create('paymentRequestButton', {
       paymentRequest,
-      style: {
-        paymentRequestButton: {
-          type: 'buy',
-          theme: 'black',
-          height: '44px',
-        },
-      },
+      style: { paymentRequestButton: { type: 'buy', theme: 'black', height: '44px' } },
     })
 
     prButton.mount(applePayRef.current)
 
-    paymentRequest.on('paymentmethod', () => {
-      setStatus('success')
-    })
+    paymentRequest.on('paymentmethod', () => setStatus('success'))
 
     return () => {
-      try {
-        prButton.unmount()
-      } catch {}
+      try { prButton.unmount() } catch {}
     }
   }, [paymentRequest])
-
 
   const handleSubmit = async () => {
     setError(null)
     setLoading(true)
-
     try {
-      const { error } = await stripe.createPaymentMethod({
-        type: 'card',
-        card: cardElement,
-      })
-
-      if (error) {
-        setError(error.message)
-        setStatus('error')
-      } else {
-        setStatus('success')
-      }
+      const { error } = await stripe.createPaymentMethod({ type: 'card', card: cardElement })
+      if (error) { setError(error.message); setStatus('error') } 
+      else { setStatus('success') }
     } catch (err: any) {
       setError(err.message ?? 'Something went wrong')
       setStatus('error')
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-8">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-        Payment Demo
-      </h2>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Payment Demo</h2>
 
-      {/* Payment Method Switch */}
+      {/* Switch Payment Method */}
       <div className="flex gap-2 mb-6">
         <button
           onClick={() => setMethod('card')}
           className={`flex-1 py-2 rounded-lg font-medium ${
-            method === 'card'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+            method === 'card' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
           }`}
         >
           Card
@@ -186,9 +155,7 @@ export default function PaymentForm() {
         <button
           onClick={() => setMethod('apple_pay')}
           className={`flex-1 py-2 rounded-lg font-medium ${
-            method === 'apple_pay'
-              ? 'bg-black text-white'
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+            method === 'apple_pay' ? 'bg-black text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
           }`}
         >
           Apple Pay
@@ -206,16 +173,8 @@ export default function PaymentForm() {
       {/* Card */}
       {method === 'card' && (
         <>
-          <div
-            ref={cardElementRef}
-            className="p-4 border rounded-lg mb-4 bg-white dark:bg-gray-700"
-          />
-
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg"
-          >
+          <div ref={cardElementRef} className="p-4 border rounded-lg mb-4 bg-white dark:bg-gray-700" />
+          <button onClick={handleSubmit} disabled={loading} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg">
             Pay ${amount}
           </button>
         </>
@@ -234,18 +193,9 @@ export default function PaymentForm() {
         </div>
       )}
 
-      {/* Status */}
-      {status === 'success' && (
-        <p className="mt-6 text-green-600 font-semibold">
-          Payment successful
-        </p>
-      )}
-
-      {error && (
-        <p className="mt-6 text-red-600 font-semibold">
-          {error}
-        </p>
-      )}
+      {/* Status & Errors */}
+      {status === 'success' && <p className="mt-6 text-green-600 font-semibold">Payment successful</p>}
+      {error && <p className="mt-6 text-red-600 font-semibold">{error}</p>}
     </div>
   )
 }

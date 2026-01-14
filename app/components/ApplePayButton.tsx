@@ -12,7 +12,7 @@ export function ApplePayButton() {
 
     const pr = stripe.paymentRequest({
       country: 'AE',
-      currency: 'sar',
+      currency: 'aed',
       total: {
         label: 'Demo Payment',
         amount: 2000, // 20.00 SAR
