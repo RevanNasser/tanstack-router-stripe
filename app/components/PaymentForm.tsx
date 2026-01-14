@@ -27,7 +27,7 @@ export default function PaymentForm() {
   const cardElementRef = useRef<HTMLDivElement>(null)
   const applePayRef = useRef<HTMLDivElement>(null)
 
-  // Initialize Stripe Elements (Card)
+  // Async Stripe Initialization
   useEffect(() => {
     let mounted = true
     let card: any = null
@@ -42,14 +42,13 @@ export default function PaymentForm() {
 
         const isDark = document.documentElement.classList.contains('dark')
 
+        // Mount card element if needed
         card = elementsInstance.create('card', {
           style: {
             base: {
               fontSize: '16px',
               color: isDark ? '#f1f5f9' : '#0f172a',
-              '::placeholder': {
-                color: isDark ? '#64748b' : '#94a3b8',
-              },
+              '::placeholder': { color: isDark ? '#64748b' : '#94a3b8' },
             },
             invalid: { color: '#dc2626' },
           },
@@ -65,13 +64,14 @@ export default function PaymentForm() {
               setError(event.error?.message ?? null)
             })
           } else {
-            setTimeout(mountCard, 100)
+            setTimeout(mountCard, 50)
           }
         }
 
         mountCard()
       } else {
-        setTimeout(initStripe, 100)
+        // Retry until Stripe.js loads
+        setTimeout(initStripe, 50)
       }
     }
 
@@ -85,17 +85,14 @@ export default function PaymentForm() {
     }
   }, [])
 
-  // Setup Apple Pay PaymentRequest
+  // Apple Pay PaymentRequest Setup
   useEffect(() => {
     if (!stripe) return
 
     const pr = stripe.paymentRequest({
       country: 'AE',
       currency: 'aed',
-      total: {
-        label: 'Demo Payment',
-        amount: Math.round(Number(amount) * 100),
-      },
+      total: { label: 'Demo Payment', amount: Math.round(Number(amount) * 100) },
       requestPayerName: true,
       requestPayerEmail: true,
     })
@@ -111,26 +108,23 @@ export default function PaymentForm() {
     })
   }, [stripe, amount])
 
-  // Mount Apple Pay button
+  // Mount Apple Pay Button
   useEffect(() => {
     if (!paymentRequest || !applePayRef.current || !stripe) return
 
     const prButton = stripe.elements().create('paymentRequestButton', {
       paymentRequest,
-      style: {
-        paymentRequestButton: { type: 'buy', theme: 'black', height: '44px' },
-      },
+      style: { paymentRequestButton: { type: 'buy', theme: 'black', height: '44px' } },
     })
 
     prButton.mount(applePayRef.current)
 
     paymentRequest.on('paymentmethod', async (ev: any) => {
       try {
-        // In production, you should send the paymentMethod.id to your backend
         console.log('Apple Pay payment method received', ev.paymentMethod)
         ev.complete('success')
         setStatus('success')
-      } catch (err) {
+      } catch {
         ev.complete('fail')
         setStatus('error')
       }
@@ -151,11 +145,7 @@ export default function PaymentForm() {
     setLoading(true)
 
     try {
-      const { error } = await stripe.createPaymentMethod({
-        type: 'card',
-        card: cardElement,
-      })
-
+      const { error } = await stripe.createPaymentMethod({ type: 'card', card: cardElement })
       if (error) {
         setError(error.message)
         setStatus('error')
@@ -172,9 +162,7 @@ export default function PaymentForm() {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-8">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-        Payment Demo
-      </h2>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Payment Demo</h2>
 
       {/* Payment Method Switch */}
       <div className="flex gap-2 mb-6">
@@ -201,7 +189,7 @@ export default function PaymentForm() {
         </button>
       </div>
 
-      {/* Amount */}
+      {/* Amount Input */}
       <input
         type="number"
         value={amount}
@@ -209,13 +197,10 @@ export default function PaymentForm() {
         className="w-full mb-6 px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
       />
 
-      {/* Card */}
+      {/* Card Payment */}
       {method === 'card' && (
         <>
-          <div
-            ref={cardElementRef}
-            className="p-4 border rounded-lg mb-4 bg-white dark:bg-gray-700"
-          />
+          <div ref={cardElementRef} className="p-4 border rounded-lg mb-4 bg-white dark:bg-gray-700" />
           <button
             onClick={handleSubmit}
             disabled={loading}
@@ -226,25 +211,21 @@ export default function PaymentForm() {
         </>
       )}
 
-      {/* Apple Pay */}
+      {/* Apple Pay Payment */}
       {method === 'apple_pay' && (
         <div>
           {applePayAvailable ? (
             <div ref={applePayRef} />
           ) : (
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Apple Pay is not available on this device or browser, or your domain
-              is not verified.
+              Apple Pay is not available on this device or browser, or your domain is not verified.
             </p>
           )}
         </div>
       )}
 
       {/* Status */}
-      {status === 'success' && (
-        <p className="mt-6 text-green-600 font-semibold">Payment successful ✅</p>
-      )}
-
+      {status === 'success' && <p className="mt-6 text-green-600 font-semibold">Payment successful ✅</p>}
       {error && <p className="mt-6 text-red-600 font-semibold">{error}</p>}
     </div>
   )

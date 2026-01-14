@@ -13,9 +13,11 @@ export const Route = createRootRoute({
     scripts: [
       {
         src: 'https://js.stripe.com/v3/',
-      },
+        async: true,
+        defer: true,      },
     
     ],
+    
   }),
 
   component: () => (
